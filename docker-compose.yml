@@ -1,0 +1,107 @@
+version: '3.2'
+
+networks:
+  api-network:
+    driver: bridge
+
+services:
+  db:
+    image: postgres:10.1
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_USER: root
+      POSTGRES_DB: api
+    volumes:
+      - db:/var/lib/db
+    networks:
+      - api-network
+
+  kafka:
+    image: bitnami/kafka
+    volumes:
+      - kafka:/bitnami/kafka
+    networks:
+      - api-network
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+    links:
+      - zookeeper
+
+  zookeeper:
+    image: bitnami/zookeeper
+    networks:
+      - api-network
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: 'yes'
+
+  gateway:
+    build:
+      context: ./gateway
+    restart: always
+    environment:
+      DATABASE_PORT: 5432
+      DATABASE_NAME: api
+      DATABASE_HOST: db
+      DATABASE_USERNAME: root
+      DATABASE_PASSWORD: root
+      PORT: 3000
+    networks:
+      - api-network
+    links:
+      - db
+      - kafka
+      - manufacturer
+    ports:
+      - 3000:3000
+
+  manufacturer:
+    build: ./manufacturerApi
+    restart: always
+    hostname: manufacturer
+    networks:
+      - api-network
+    links:
+      - kafka
+      - notary
+    environment:
+      KAFKA_SERVER: kafka:9092
+
+  notary:
+    build: ./notaryApi
+    restart: always
+    hostname: notary
+    networks:
+      - api-network
+    links:
+      - kafka
+    environment:
+      KAFKA_SERVER: kafka:9092
+
+  authority:
+    build: ./authorityApi
+    restart: always
+    hostname: authority
+    networks:
+      - api-network
+    links:
+      - kafka
+    environment:
+      KAFKA_SERVER: kafka:9092
+
+#  customer:
+#    build: ./customerApi
+#    restart: always
+#    hostname: customer
+#    networks:
+#      - api-network
+#    links:
+#      - kafka
+#    environment:
+#      KAFKA_SERVER: kafka:9092
+#
+
+
+volumes:
+  db:
+  kafka:
