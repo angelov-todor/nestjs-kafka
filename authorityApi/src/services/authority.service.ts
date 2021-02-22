@@ -4,12 +4,21 @@ import { ClientKafka } from '@nestjs/microservices';
 import { NotaryRecord } from '../notary-record';
 import { Shipment } from '../shipment';
 import { KAFKA_SERVICE } from './constants';
+import * as crypto from 'crypto';
+import { MessagePayload } from '../message-payload';
 
 @Injectable()
 export class AuthorityService implements OnModuleInit {
   private static createAckMessage(shipmentMessage: Message): Message {
     shipmentMessage.payload.messageType = 'MessageAcknowledgement';
     return shipmentMessage;
+  }
+
+  private static createHash(payload: MessagePayload): string {
+    return crypto
+      .createHash('sha256')
+      .update(JSON.stringify(payload))
+      .digest('base64');
   }
 
   private shipments: Map<string, Shipment> = new Map();
@@ -29,7 +38,9 @@ export class AuthorityService implements OnModuleInit {
       .toPromise();
     if (
       record.nonce !== shipmentMessage.nonce ||
-      record.timestamp !== shipmentMessage.timestamp
+      record.timestamp !== shipmentMessage.timestamp ||
+      AuthorityService.createHash(shipmentMessage.payload) !==
+        shipmentMessage.hash
     ) {
       // Upon calling the Notary API with the payload's hash, if the nonce and
       // timestamp returned are different from the message's nonce and
