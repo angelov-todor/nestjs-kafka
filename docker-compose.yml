@@ -89,19 +89,6 @@ services:
     environment:
       KAFKA_SERVER: kafka:9092
 
-#  customer:
-#    build: ./customerApi
-#    restart: always
-#    hostname: customer
-#    networks:
-#      - api-network
-#    links:
-#      - kafka
-#    environment:
-#      KAFKA_SERVER: kafka:9092
-#
-
-
 volumes:
   db:
   kafka:
