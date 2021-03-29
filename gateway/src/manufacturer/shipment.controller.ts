@@ -9,6 +9,10 @@ import {
 import { KAFKA_SERVICE } from '../constants';
 import { ClientKafka } from '@nestjs/microservices';
 import { ShipmentRequest } from './shipment.request';
+import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Shipment } from './shipment';
+import { Event } from './dto/event';
+import { Message } from './dto/message';
 
 @Controller('shipment')
 export class ShipmentController implements OnModuleInit {
@@ -17,23 +21,48 @@ export class ShipmentController implements OnModuleInit {
   ) {}
 
   @Post()
-  public async newShipment(@Body() shipmentRequest: ShipmentRequest) {
+  @ApiOperation({ summary: 'Create new shipment' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Created new shipment.',
+    type: Shipment,
+  })
+  @ApiBody({ type: ShipmentRequest })
+  public async newShipment(
+    @Body() shipmentRequest: ShipmentRequest,
+  ): Promise<Shipment> {
     return await this.clientKafka
       .send('shipment_create', shipmentRequest)
       .toPromise();
   }
 
   @Get()
-  public async getShipments() {
+  @ApiResponse({
+    status: 200,
+    description: 'Get all shipments.',
+    type: [Shipment],
+  })
+  public async getShipments(): Promise<Shipment[]> {
     return await this.clientKafka.send('shipment_list', {}).toPromise();
   }
 
   @Get('events')
+  @ApiResponse({
+    status: 200,
+    description: 'Get events for debug.',
+    type: [Event],
+  })
   public async getShipmentsEvents() {
     return await this.clientKafka.send('shipment_events', {}).toPromise();
   }
 
   @Get('messages')
+  @ApiResponse({
+    status: 200,
+    description: 'Get messages for debug.',
+    type: [Message],
+  })
   public async getShipmentsMessages() {
     return await this.clientKafka.send('shipment_messages', {}).toPromise();
   }
